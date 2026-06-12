@@ -328,7 +328,7 @@ export default function TelecomDashboard({ sheet, filteredData }: Props) {
 
   if (!telecomData) return <div className="p-8 text-center text-gray-500">Đang phân tích dữ liệu...</div>;
 
-  const filterPredicates = useMemo(() => ({
+  const filterPredicates: Record<string, (a: any) => boolean> = useMemo(() => ({
     status: (a: any) => {
       if (filterStatus.length === 0) return true;
       const s = (a.statusTags.length > 0 && a.statusTags[0] !== 'Chưa phát hiện lỗi') ? a.statusTags[0] : 'Chưa phát hiện lỗi';

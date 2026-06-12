@@ -146,7 +146,8 @@ export default function Dashboard({ sheets, onReset }: DashboardProps) {
     if (Object.keys(filters).length === 0) return activeSheet.data;
 
     return activeSheet.data.filter(row => {
-      for (const [col, selectedVals] of Object.entries(filters)) {
+      const filterEntries = Object.entries(filters) as [string, string[]][];
+      for (const [col, selectedVals] of filterEntries) {
         if (!selectedVals || selectedVals.length === 0) continue;
         const val = row[col];
         const valStr = (val === null || val === undefined) ? '' : String(val);
@@ -412,7 +413,7 @@ export default function Dashboard({ sheets, onReset }: DashboardProps) {
           <div className="space-y-6">
             {summaryStats && numericCols.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(summaryStats).slice(0, 4).map(([col, stats]) => (
+                {(Object.entries(summaryStats) as [string, { sum: number; avg: number; max: number; min: number }][]).slice(0, 4).map(([col, stats]) => (
                   <div key={col} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex-1">
                     <div className="text-gray-500 uppercase tracking-wider text-xs font-medium flex items-center gap-2 mb-3">
                       <Hash size={14} className="text-blue-500" />
