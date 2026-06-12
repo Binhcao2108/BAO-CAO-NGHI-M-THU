@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Excel Dashboard",
+  "description": "Nhập file excel (.xlsx, .csv) để tạo dashboard trực quan hóa dữ liệu tự động.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
