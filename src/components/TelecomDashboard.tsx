@@ -180,6 +180,7 @@ export default function TelecomDashboard({ sheet, filteredData }: Props) {
   const [filterCause, setFilterCause] = useState<string[]>([]);
   const [filterRegion, setFilterRegion] = useState<string[]>([]);
   const [filterTeam, setFilterTeam] = useState<string[]>([]);
+  const [statusChartType, setStatusChartType] = useState<'list' | 'chart'>('list');
 
   const telecomData = useMemo(() => {
     if (!sheet || filteredData.length === 0) return null;
@@ -556,20 +557,151 @@ export default function TelecomDashboard({ sheet, filteredData }: Props) {
       {/* Row 2 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Initial Detect Error / Status */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-800 mb-6 flex items-center gap-2">
-            <Activity size={16} className="text-amber-500" /> Tình trạng lỗi ban đầu
-          </h3>
-          <div className="h-[300px]">
-             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={telecomData.paretoStatus} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={{ stroke: '#e5e7eb' }} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={false} tickLine={false} width={250} />
-                <RechartsTooltip cursor={{ fill: '#f3f4f6' }} contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px', color: '#111827' }} />
-                <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} maxBarSize={40} onClick={data => { setFilterStatus([data.originalName || data.name]); setFilterCause([]); setFilterDetect([]); setFilterModem([]); }} className="cursor-pointer" />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 border-b border-gray-100 pb-4">
+              <div className="flex items-center gap-2">
+                <Activity size={16} className="text-amber-500" />
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-800">Tình trạng lỗi ban đầu</h3>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Nhấn để lọc nhanh danh sách</p>
+                </div>
+              </div>
+              <div className="flex items-center bg-gray-100 p-0.5 rounded-lg self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => setStatusChartType('list')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                    statusChartType === 'list'
+                      ? 'bg-white text-amber-700 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  Dạng danh sách %
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusChartType('chart')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                    statusChartType === 'chart'
+                      ? 'bg-white text-amber-700 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  Biểu đồ cột ngang
+                </button>
+              </div>
+            </div>
+
+            {statusChartType === 'list' ? (
+              <div className="space-y-3.5 max-h-[290px] overflow-y-auto pr-1 custom-scrollbar">
+                {telecomData.paretoStatus.map((item, index) => {
+                  const maxVal = Math.max(...telecomData.paretoStatus.map(s => s.count)) || 1;
+                  const percentage = Math.round((item.count / telecomData.total) * 100);
+                  const barWidth = `${(item.count / maxVal) * 100}%`;
+                  const isSelected = filterStatus.includes(item.originalName || item.name);
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        const name = item.originalName || item.name;
+                        if (filterStatus.includes(name)) {
+                          setFilterStatus([]);
+                        } else {
+                          setFilterStatus([name]);
+                          setFilterCause([]);
+                          setFilterDetect([]);
+                          setFilterModem([]);
+                          setFilterRegion([]);
+                          setFilterTeam([]);
+                        }
+                      }}
+                      className={`group cursor-pointer p-3 rounded-xl transition-all border ${
+                        isSelected
+                          ? 'bg-amber-50/80 border-amber-300 shadow-sm'
+                          : 'bg-gray-50/50 border-gray-100/70 hover:bg-gray-100/80 hover:border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <span className={`text-xs font-semibold leading-relaxed break-words flex-1 ${isSelected ? 'text-amber-900 font-bold' : 'text-gray-700 group-hover:text-amber-800'}`}>
+                          {item.originalName || item.name}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-gray-900 flex items-center gap-1.5 shrink-0">
+                          {item.count.toLocaleString()} <span className="text-gray-400 font-normal">({percentage}%)</span>
+                        </span>
+                      </div>
+
+                      <div className="w-full bg-gray-200/60 rounded-full h-2.5 overflow-hidden shadow-inner">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isSelected ? 'bg-amber-500' : 'bg-amber-400 group-hover:bg-amber-500'
+                          }`}
+                          style={{ width: barWidth }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-[290px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={telecomData.paretoStatus} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} axisLine={{ stroke: '#e5e7eb' }} tickLine={false} />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      tick={({ x, y, payload }) => {
+                        const displayName = payload.value.length > 35 ? payload.value.substring(0, 35) + '...' : payload.value;
+                        const isSel = filterStatus.includes(payload.value);
+                        return (
+                          <g transform={`translate(${x},${y})`}>
+                            <text
+                              x={-10}
+                              y={4}
+                              dy={0}
+                              textAnchor="end"
+                              fill={isSel ? "#b45309" : "#4b5563"}
+                              fontSize={10}
+                              fontWeight={isSel ? "bold" : "normal"}
+                              className="font-sans"
+                            >
+                              {displayName}
+                            </text>
+                          </g>
+                        );
+                      }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={180}
+                    />
+                    <RechartsTooltip cursor={{ fill: '#f3f4f6' }} contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px', color: '#111827' }} />
+                    <Bar
+                      dataKey="count"
+                      fill="#f59e0b"
+                      radius={[0, 4, 4, 0]}
+                      maxBarSize={40}
+                      onClick={data => {
+                        const name = data.originalName || data.name;
+                        if (filterStatus.includes(name)) {
+                          setFilterStatus([]);
+                        } else {
+                          setFilterStatus([name]);
+                          setFilterCause([]);
+                          setFilterDetect([]);
+                          setFilterModem([]);
+                          setFilterRegion([]);
+                          setFilterTeam([]);
+                        }
+                      }}
+                      className="cursor-pointer"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         </div>
 
