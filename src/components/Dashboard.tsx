@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { SheetData } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
-import { Activity, Hash, Tag, Table as TableIcon, LayoutDashboard, Database, ChevronLeft, Filter, Settings, BarChart2 } from 'lucide-react';
+import { Activity, Hash, Tag, Table as TableIcon, LayoutDashboard, Database, ChevronLeft, Filter, Settings, BarChart2, Search } from 'lucide-react';
 import TelecomDashboard from './TelecomDashboard';
 import { findColumnByKeywords, COL_KEYWORDS } from '../utils/telecomMappings';
 
 const MultiSelect = ({ col, values, selected, onChange }: { col: string, values: string[], selected: string[], onChange: (v: string[]) => void }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -17,47 +18,88 @@ const MultiSelect = ({ col, values, selected, onChange }: { col: string, values:
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  React.useEffect(() => {
+    if (!isOpen) {
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
+  const filteredValues = useMemo(() => {
+    if (!searchQuery.trim()) return values;
+    const query = searchQuery.trim().toLowerCase();
+    return values.filter(v => String(v).toLowerCase().includes(query));
+  }, [values, searchQuery]);
+
   return (
     <div className="relative" ref={ref}>
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 cursor-pointer flex justify-between items-center shadow-sm"
+        className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 cursor-pointer flex justify-between items-center shadow-sm hover:bg-gray-200/75 transition-colors"
       >
-        <span className="truncate">{selected.length ? `${selected.length} đang chọn` : '-- Tất cả --'}</span>
-        <span className="text-[10px] text-gray-500">▼</span>
+        <span className="truncate font-medium">{selected.length ? `${selected.length} đang chọn` : '-- Tất cả --'}</span>
+        <span className="text-[9px] text-gray-500">▼</span>
       </div>
       
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-full min-w-[220px] max-h-[250px] overflow-y-auto bg-gray-100 border border-gray-200 rounded-lg shadow-xl z-50 flex flex-col p-1.5 custom-scrollbar">
-          {selected.length > 0 && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onChange([]); }}
-              className="text-left px-2 py-1.5 text-xs text-rose-400 hover:bg-gray-200 rounded mb-1 border-b border-gray-200"
-            >
-              Bỏ chọn tất cả
-            </button>
-          )}
-          {values.map(v => (
-            <div 
-              key={v} 
-              className="flex items-start gap-2 px-2 py-1.5 hover:bg-gray-200 rounded text-xs text-gray-700 cursor-pointer transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                const next = selected.includes(v) ? selected.filter(x => x !== v) : [...selected, v];
-                onChange(next);
-              }}
-            >
-              <div className="pt-0.5 pointer-events-none">
-                <input 
-                  type="checkbox" 
-                  checked={selected.includes(v)}
-                  readOnly
-                  className="rounded bg-gray-50 border-gray-200 text-blue-500 focus:ring-blue-500 focus:ring-offset-[#f3f4f6]"
-                />
+        <div className="absolute top-full left-0 mt-1 w-full min-w-[240px] max-h-[290px] overflow-hidden bg-white border border-gray-200 rounded-xl shadow-xl z-50 flex flex-col">
+          <div className="p-2 border-b border-gray-100 bg-gray-50/50 flex items-center gap-1.5">
+            <Search size={12} className="text-gray-400 shrink-0" />
+            <input
+              type="text"
+              placeholder={`Tìm trong cột...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full text-[11px] bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-[10px] text-gray-400 hover:text-gray-600 px-1 font-semibold focus:outline-none cursor-pointer"
+              >
+                Xóa
+              </button>
+            )}
+          </div>
+
+          <div className="overflow-y-auto flex-1 p-1 max-h-52 custom-scrollbar">
+            {selected.length > 0 && searchQuery.trim() === '' && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onChange([]); }}
+                className="w-full text-left px-2.5 py-1 text-[11px] text-rose-500 hover:bg-rose-50 rounded-lg mb-1 font-semibold transition-colors cursor-pointer"
+              >
+                Bỏ chọn tất cả ({selected.length})
+              </button>
+            )}
+            {filteredValues.length === 0 ? (
+              <div className="p-3 text-[11px] text-center text-gray-400">
+                Không tìm thấy kết quả
               </div>
-              <span className="flex-1 break-words">{v || '(Trống)'}</span>
-            </div>
-          ))}
+            ) : (
+              filteredValues.map(v => (
+                <div 
+                  key={v} 
+                  className="flex items-start gap-2 px-2.5 py-1.5 hover:bg-gray-50 rounded-md text-[11px] text-gray-700 cursor-pointer transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = selected.includes(v) ? selected.filter(x => x !== v) : [...selected, v];
+                    onChange(next);
+                  }}
+                >
+                  <div className="pt-0.5 pointer-events-none shrink-0">
+                    <input 
+                      type="checkbox" 
+                      checked={selected.includes(v)}
+                      readOnly
+                      className="rounded bg-gray-50 border-gray-300 text-blue-500 focus:ring-blue-500 focus:ring-offset-[#f3f4f6]"
+                    />
+                  </div>
+                  <span className="flex-1 break-words leading-relaxed">{v || '(Trống)'}</span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>

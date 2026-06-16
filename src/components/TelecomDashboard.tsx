@@ -6,6 +6,7 @@ import { findColumnByKeywords, COL_KEYWORDS, getIssueCategory, summarizeText } f
 
 function MultiSelect({ title, options, selected, onChange, className = '' }: any) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -18,6 +19,12 @@ function MultiSelect({ title, options, selected, onChange, className = '' }: any
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery('');
+    }
+  }, [open]);
+
   const toggleOption = (opt: string) => {
     if (selected.includes(opt)) {
       onChange(selected.filter((o: string) => o !== opt));
@@ -28,12 +35,18 @@ function MultiSelect({ title, options, selected, onChange, className = '' }: any
 
   const displayText = selected.length === 0 ? title : selected.length === 1 ? (selected[0].length > 20 ? selected[0].substring(0,20)+'...' : selected[0]) : `${title} (${selected.length})`;
 
+  const filteredOptions = useMemo(() => {
+    if (!searchQuery.trim()) return options;
+    const query = searchQuery.trim().toLowerCase();
+    return options.filter((opt: any) => opt.name.toLowerCase().includes(query));
+  }, [options, searchQuery]);
+
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       <button 
         type="button"
         onClick={() => setOpen(!open)}
-        className="pl-3 pr-8 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-full appearance-none cursor-pointer text-left truncate relative"
+        className="pl-3 pr-8 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-full appearance-none cursor-pointer text-left truncate relative animate-fade-in"
       >
         {displayText}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
@@ -42,30 +55,69 @@ function MultiSelect({ title, options, selected, onChange, className = '' }: any
       </button>
       
       {open && (
-        <div className="absolute z-50 mt-1 w-full min-w-max bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-          <div className="p-1">
-            <label className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-gray-100 rounded cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={selected.length === 0}
-                onChange={() => { onChange([]); setOpen(false); }}
-                className="rounded border-gray-300 text-blue-500 focus:ring-blue-500/50"
-              />
-              Tất cả
-            </label>
-            {options.map((opt: any) => (
-              <label key={opt.name} className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-gray-100 rounded cursor-pointer">
+        <div className="absolute z-50 mt-1 w-full min-w-[245px] bg-white border border-gray-200 rounded-xl shadow-xl max-h-72 overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
+            <Search size={14} className="text-gray-400 shrink-0" />
+            <input
+              type="text"
+              placeholder={`Tìm kiếm trong ${title.toLowerCase()}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-[10px] text-gray-400 hover:text-gray-600 px-1 font-semibold focus:outline-none cursor-pointer"
+              >
+                Xóa
+              </button>
+            )}
+          </div>
+          <div className="overflow-y-auto p-1 max-h-56 custom-scrollbar">
+            {searchQuery.trim() === '' && (
+              <label className="flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-gray-150 rounded-lg cursor-pointer text-gray-700">
                 <input 
                   type="checkbox" 
-                  checked={selected.includes(opt.name)}
-                  onChange={() => toggleOption(opt.name)}
+                  checked={selected.length === 0}
+                  onChange={() => { onChange([]); setOpen(false); }}
                   className="rounded border-gray-300 text-blue-500 focus:ring-blue-500/50"
                 />
-                <span className="truncate max-w-[200px]" title={opt.name}>{opt.name.length > 30 ? opt.name.substring(0,30) + '...' : opt.name}</span>
-                <span className="text-gray-400 text-xs ml-auto">({opt.count})</span>
+                <span className="font-medium">Tất cả</span>
               </label>
-            ))}
+            )}
+            {filteredOptions.length === 0 ? (
+              <div className="p-3 text-xs text-center text-gray-400">
+                Không tìm thấy kết quả
+              </div>
+            ) : (
+              filteredOptions.map((opt: any) => (
+                <label key={opt.name} className="flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-gray-100 rounded-lg cursor-pointer text-gray-700 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selected.includes(opt.name)}
+                    onChange={() => toggleOption(opt.name)}
+                    className="rounded border-gray-300 text-blue-500 focus:ring-blue-500/50"
+                  />
+                  <span className="truncate max-w-[170px]" title={opt.name}>{opt.name.length > 25 ? opt.name.substring(0,25) + '...' : opt.name}</span>
+                  <span className="text-gray-400 font-mono text-[10px] ml-auto shrink-0">({opt.count})</span>
+                </label>
+              ))
+            )}
           </div>
+          {selected.length > 0 && (
+            <div className="p-1 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => onChange([])}
+                className="text-[10px] text-rose-500 hover:text-rose-600 px-2.5 py-1 rounded hover:bg-rose-50 font-medium transition-colors cursor-pointer"
+              >
+                Bỏ chọn tất cả ({selected.length})
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
